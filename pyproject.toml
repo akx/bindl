@@ -1,0 +1,33 @@
+[project]
+name = "bindl"
+dynamic = ["version"]
+authors = [{ name = "Aarni Koskela", email = "akx@iki.fi" }]
+license = "MIT"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "httpx>=0.28.1",
+    "pydantic~=2.10.5",
+    "tomli~=2.2.1 ; python_full_version < '3.11'",
+]
+
+[project.scripts]
+bindl = "bindl.__main__:main"
+
+[tool.hatch.version]
+path = "src/bindl/__init__.py"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.9.2",
+]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+extend-select = ["I", "COM812"]

@@ -1,0 +1,10 @@
+*.egg-info
+*.py[odc]
+.temp
+.venv
+/configs
+__pycache__/
+build/
+depot
+dist/
+wheels/
