@@ -12,6 +12,7 @@ def make_any_match(regexps: list[re.Pattern]):
 FILTERS = {
     "basename": lambda x: os.path.basename(x),
     "strip_ext": lambda x: os.path.basename(x).partition(".")[0],
+    "strip_tar": lambda x: os.path.basename(x).partition(".tar")[0],
 }
 
 
