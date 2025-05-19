@@ -6,7 +6,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 from bindl.helpers import FilteringFormatter
-from bindl.models import AssetInfo, ReleaseInfo
+from bindl.models import AssetInfo, GitHubReleaseInfo
 
 try:
     import tomllib
@@ -20,7 +20,7 @@ class SourceConfig(BaseModel):
     included_tarball_member_names: list[re.Pattern] = Field(alias="included-tarball-member-names")
 
 
-def clean_asset_name(name: str, release: ReleaseInfo) -> str:
+def clean_asset_name(name: str, release: GitHubReleaseInfo) -> str:
     name = name.removeprefix(f"{release.project_name}-")
     name = name.removeprefix(f"{release.project_name}_")
     name = name.removeprefix(f"{release.name}-")
@@ -33,7 +33,7 @@ class TargetConfig(BaseModel):
 
     def make_target_gz_name(
         self,
-        release: ReleaseInfo,
+        release: GitHubReleaseInfo,
         asset: AssetInfo,
         output_root: Path,
         name: str,

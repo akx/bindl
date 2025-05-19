@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Callable, Iterable
 
 from bindl.config import TargetConfig
-from bindl.models import ReleaseAssetFile
+from bindl.models import AssetFile
 
 
 def zopfli_and_remove_file(source_path: Path, dest_path: Path):
@@ -22,7 +22,7 @@ def zopfli_and_remove_file(source_path: Path, dest_path: Path):
 
 
 def recompress_files(
-    files: list[ReleaseAssetFile],
+    files: list[AssetFile],
     *,
     extract_root: Path,
     output_root: Path,
@@ -75,14 +75,14 @@ class RecompressJob:
 
 
 def extract_to_temp(
-    raf: ReleaseAssetFile,
+    af: AssetFile,
     *,
     temp_dir: Path,
     output_root: Path,
     is_acceptable_tarball_member_name: Callable[[str], bool],
     target_config: TargetConfig,
 ) -> Iterable[RecompressJob]:
-    tarball_file = raf.local_path
+    tarball_file = af.local_path
     if not tarball_file.name.endswith((".tar", ".tar.gz")):
         raise ValueError(f"Unexpected tarball filename: {tarball_file.name}")
     with tarfile.open(tarball_file) as tf:
@@ -90,12 +90,12 @@ def extract_to_temp(
             if not is_acceptable_tarball_member_name(name):
                 continue
             target_filename = target_config.make_target_gz_name(
-                release=raf.release,
-                asset=raf.asset,
+                release=af.release,
+                asset=af.asset,
                 output_root=output_root,
                 name=name,
             )
-            extract_filename = temp_dir / raf.release.name / raf.asset.name / name
+            extract_filename = temp_dir / af.release.name / af.asset.name / name
             if not extract_filename.is_file():
                 extract_filename.parent.mkdir(parents=True, exist_ok=True)
                 extract_filename.write_bytes(tf.extractfile(name).read())

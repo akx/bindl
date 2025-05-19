@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 @dataclasses.dataclass(frozen=True)
-class ReleaseInfo:
+class GitHubReleaseInfo:
     data: dict
     name: str
     project_name: str
@@ -16,7 +16,11 @@ class AssetInfo:
 
 
 @dataclasses.dataclass(frozen=True)
-class ReleaseAssetFile:
-    release: ReleaseInfo
+class AssetFile:
     asset: AssetInfo
     local_path: Path
+
+
+@dataclasses.dataclass(frozen=True)
+class GitHubReleaseAssetFile(AssetFile):
+    release: GitHubReleaseInfo
