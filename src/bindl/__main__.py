@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 
 from bindl.config import Config
-from bindl.github import download_assets, get_latest_release
+from bindl.github import download_github_assets, get_latest_release
 from bindl.helpers import make_any_match
 from bindl.lib import recompress_files
 
@@ -20,7 +20,7 @@ def main():
     extract_root = temp_root / "extract"
     release = get_latest_release(cfg.source.github)
 
-    release_asset_files = download_assets(
+    release_asset_files = download_github_assets(
         release,
         is_acceptable=make_any_match(cfg.source.included_release_files),
         download_root=download_root,

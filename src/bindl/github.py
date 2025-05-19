@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Callable
 
 from bindl.download import DownloadJob, download_json
-from bindl.models import AssetInfo, ReleaseAssetFile, ReleaseInfo
+from bindl.models import AssetInfo, GitHubReleaseAssetFile, GitHubReleaseInfo
 
 log = logging.getLogger(__name__)
 
@@ -16,12 +16,12 @@ class AssetDownloadJob:
     download: DownloadJob
 
 
-def download_assets(
-    ri: ReleaseInfo,
+def download_github_assets(
+    ri: GitHubReleaseInfo,
     *,
     is_acceptable: Callable[[str], bool],
     download_root: Path,
-) -> list[ReleaseAssetFile]:
+) -> list[GitHubReleaseAssetFile]:
     download_root = download_root / ri.name
     download_root.mkdir(parents=True, exist_ok=True)
     asset_download_jobs: list[AssetDownloadJob] = []
@@ -40,7 +40,7 @@ def download_assets(
         for _ in pool.imap_unordered(lambda adj: adj.download.run(), asset_download_jobs):
             pass
     return [
-        ReleaseAssetFile(
+        GitHubReleaseAssetFile(
             release=ri,
             asset=adj.asset,
             local_path=adj.download.dest,
@@ -49,7 +49,7 @@ def download_assets(
     ]
 
 
-def get_latest_release(project_name: str) -> ReleaseInfo:
+def get_latest_release(project_name: str) -> GitHubReleaseInfo:
     print(f"*** Finding releases for {project_name}...")
     res = download_json(f"https://api.github.com/repos/{project_name}/releases")
     latest_release = sorted(
@@ -57,7 +57,7 @@ def get_latest_release(project_name: str) -> ReleaseInfo:
         key=lambda r: r["created_at"],
         reverse=True,
     )[0]
-    ri = ReleaseInfo(
+    ri = GitHubReleaseInfo(
         data=latest_release,
         name=latest_release["tag_name"].lstrip("v"),
         project_name=project_name.partition("/")[2],
