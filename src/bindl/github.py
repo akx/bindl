@@ -1,19 +1,11 @@
-import dataclasses
 import logging
-from multiprocessing.pool import ThreadPool
 from pathlib import Path
 from typing import Callable
 
-from bindl.download import DownloadJob, download_json
+from bindl.download import AssetDownloadJob, DownloadJob, download_json, run_asset_download_jobs
 from bindl.models import AssetInfo, GitHubReleaseAssetFile, GitHubReleaseInfo
 
 log = logging.getLogger(__name__)
-
-
-@dataclasses.dataclass(frozen=True)
-class AssetDownloadJob:
-    asset: AssetInfo
-    download: DownloadJob
 
 
 def download_github_assets(
@@ -36,9 +28,7 @@ def download_github_assets(
             sha256_url = sha256_asset["browser_download_url"] if sha256_asset else None
             dj = DownloadJob(url=url, dest=target_filename, sha256_url=sha256_url)
             asset_download_jobs.append(AssetDownloadJob(asset=asset_info, download=dj))
-    with ThreadPool(4) as pool:
-        for _ in pool.imap_unordered(lambda adj: adj.download.run(), asset_download_jobs):
-            pass
+    run_asset_download_jobs(asset_download_jobs)
     return [
         GitHubReleaseAssetFile(
             release=ri,
@@ -50,7 +40,7 @@ def download_github_assets(
 
 
 def get_latest_release(project_name: str) -> GitHubReleaseInfo:
-    print(f"*** Finding releases for {project_name}...")
+    log.info("Finding releases for %s...", project_name)
     res = download_json(f"https://api.github.com/repos/{project_name}/releases")
     latest_release = sorted(
         [r for r in res if not (r["draft"] or r["prerelease"])],
@@ -62,5 +52,5 @@ def get_latest_release(project_name: str) -> GitHubReleaseInfo:
         name=latest_release["tag_name"].lstrip("v"),
         project_name=project_name.partition("/")[2],
     )
-    print(" -> Latest release:", ri.name)
+    log.info("OK – Latest release for %s: %s", project_name, ri.name)
     return ri

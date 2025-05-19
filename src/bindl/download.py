@@ -1,10 +1,15 @@
+from __future__ import annotations
+
 import atexit
 import dataclasses
 import hashlib
 import logging
+from multiprocessing.pool import ThreadPool
 from pathlib import Path
 
 import httpx
+
+from bindl.models import AssetInfo
 
 log = logging.getLogger(__name__)
 
@@ -38,9 +43,9 @@ class DownloadJob:
 
     def run(self):
         if self.is_complete():
-            print(f"Already have: {self.dest}")
+            log.info("Already downloaded: %s", self.dest)
             return
-        print(f"Downloading {self.url} to {self.dest}")
+        log.info("Downloading %s to %s", self.url, self.dest)
         bs = download_binary(self.url)
         self.dest.write_bytes(bs)
         if not self.is_complete():
@@ -58,3 +63,16 @@ class DownloadJob:
                 )
                 return False
         return True
+
+
+@dataclasses.dataclass(frozen=True)
+class AssetDownloadJob:
+    asset: AssetInfo
+    download: DownloadJob
+
+
+def run_asset_download_jobs(jobs: list[AssetDownloadJob]) -> None:
+    log.info("Running %d downloads...", len(jobs))
+    with ThreadPool(4) as pool:
+        for _ in pool.imap_unordered(lambda adj: adj.download.run(), jobs):
+            pass

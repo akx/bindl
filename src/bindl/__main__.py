@@ -1,4 +1,5 @@
 import argparse
+import logging
 from pathlib import Path
 
 from bindl.config import Config
@@ -8,6 +9,7 @@ from bindl.lib import recompress_files
 
 
 def main():
+    configure_logging(level=logging.INFO)
     ap = argparse.ArgumentParser()
     ap.add_argument("spec_toml")
     ap.add_argument("-o", "--output-dir", required=True)
@@ -46,6 +48,15 @@ def main():
         is_acceptable_tarball_member_name=make_any_match(cfg.source.included_tarball_member_names),
         release_name=release_name,
     )
+
+
+def configure_logging(level):
+    try:
+        from rich.logging import RichHandler
+
+        logging.basicConfig(level=level, handlers=[RichHandler()])
+    except ImportError:
+        logging.basicConfig(level=level)
 
 
 if __name__ == "__main__":
