@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import gzip
+import logging
 import subprocess
 import tarfile
 from functools import partial
@@ -12,6 +13,8 @@ from typing import Callable, Iterable
 from bindl.config.target_config import TargetConfig
 from bindl.models import AssetFile, GitHubReleaseAssetFile, GitHubReleaseInfo
 
+log = logging.getLogger(__name__)
+
 
 def zopfli_and_remove_file(source_path: Path, dest_path: Path):
     dest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -19,7 +22,9 @@ def zopfli_and_remove_file(source_path: Path, dest_path: Path):
         ["zopfli", "--gzip", "-c", str(source_path)],
     )
     dest_path.write_bytes(compressed_bytes)
-    print("Wrote", dest_path)
+    source_size = source_path.stat().st_size
+    dest_size = dest_path.stat().st_size
+    log.info("Compressed %s from %s to %s", source_path, source_size, dest_size)
     assert gzip.decompress(dest_path.read_bytes()) == source_path.read_bytes()
     source_path.unlink()
 
@@ -33,7 +38,7 @@ def recompress_files(
     is_acceptable_tarball_member_name: Callable[[str], bool],
     release_name: str,
 ):
-    print(f"*** Extracting files from {len(files)} tarballs...")
+    log.info("Extracting files from %d tarballs...", len(files))
     with ThreadPool() as pool:
         reco_jobs = []
         for res in pool.imap_unordered(
@@ -59,10 +64,10 @@ def recompress_files(
             raise ValueError(f"Duplicate target filenames: {target_filenames}")
 
         if all(ct.is_complete() for ct in reco_jobs):
-            print("All files already recompressed.")
+            log.info("All files already recompressed.")
             return
 
-        print(f"*** Recompressing {len(reco_jobs)} files with zopfli...")
+        log.info("Recompressing %d files with zopfli...", len(reco_jobs))
         for _ in pool.imap_unordered(
             lambda job: zopfli_and_remove_file(job.extract_filename, job.target_filename),
             reco_jobs,
@@ -110,6 +115,7 @@ def extract_to_temp(
             if not extract_filename.is_file():
                 extract_filename.parent.mkdir(parents=True, exist_ok=True)
                 extract_filename.write_bytes(tf.extractfile(name).read())
+                log.info("Extracted %s to %s", name, extract_filename)
             yield RecompressJob(
                 extract_filename=extract_filename,
                 target_filename=target_filename,
