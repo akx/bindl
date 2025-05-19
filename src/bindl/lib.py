@@ -1,13 +1,16 @@
+from __future__ import annotations
+
 import dataclasses
 import gzip
 import subprocess
 import tarfile
+from functools import partial
 from multiprocessing.pool import ThreadPool
 from pathlib import Path
 from typing import Callable, Iterable
 
-from bindl.config import TargetConfig
-from bindl.models import AssetFile
+from bindl.config.target_config import TargetConfig
+from bindl.models import AssetFile, GitHubReleaseAssetFile, GitHubReleaseInfo
 
 
 def zopfli_and_remove_file(source_path: Path, dest_path: Path):
@@ -28,6 +31,7 @@ def recompress_files(
     output_root: Path,
     target_config: TargetConfig,
     is_acceptable_tarball_member_name: Callable[[str], bool],
+    release_name: str,
 ):
     print(f"*** Extracting files from {len(files)} tarballs...")
     with ThreadPool() as pool:
@@ -39,6 +43,7 @@ def recompress_files(
                 output_root=output_root,
                 target_config=target_config,
                 is_acceptable_tarball_member_name=is_acceptable_tarball_member_name,
+                release_name=release_name,
             ),
             files,
         ):
@@ -81,6 +86,7 @@ def extract_to_temp(
     output_root: Path,
     is_acceptable_tarball_member_name: Callable[[str], bool],
     target_config: TargetConfig,
+    release_name: str,
 ) -> Iterable[RecompressJob]:
     tarball_file = af.local_path
     if not tarball_file.name.endswith((".tar", ".tar.gz")):
@@ -89,13 +95,18 @@ def extract_to_temp(
         for name in tf.getnames():
             if not is_acceptable_tarball_member_name(name):
                 continue
+            if isinstance(af, GitHubReleaseAssetFile):
+                asset_name_cleaner = partial(clean_asset_name, release=af.release)
+            else:
+                asset_name_cleaner = lambda x: x  # noqa: E731
             target_filename = target_config.make_target_gz_name(
-                release=af.release,
                 asset=af.asset,
-                output_root=output_root,
+                asset_name_cleaner=asset_name_cleaner,
                 name=name,
+                output_root=output_root,
+                release_name=release_name,
             )
-            extract_filename = temp_dir / af.release.name / af.asset.name / name
+            extract_filename = temp_dir / release_name / af.asset.name / name
             if not extract_filename.is_file():
                 extract_filename.parent.mkdir(parents=True, exist_ok=True)
                 extract_filename.write_bytes(tf.extractfile(name).read())
@@ -103,3 +114,11 @@ def extract_to_temp(
                 extract_filename=extract_filename,
                 target_filename=target_filename,
             )
+
+
+def clean_asset_name(name: str, release: GitHubReleaseInfo) -> str:
+    name = name.removeprefix(f"{release.project_name}-")
+    name = name.removeprefix(f"{release.project_name}_")
+    name = name.removeprefix(f"{release.name}-")
+    name = name.removeprefix(f"{release.name}_")
+    return name
