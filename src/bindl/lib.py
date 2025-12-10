@@ -94,7 +94,7 @@ def extract_to_temp(
     release_name: str,
 ) -> Iterable[RecompressJob]:
     tarball_file = af.local_path
-    if not tarball_file.name.endswith((".tar", ".tar.gz")):
+    if not tarball_file.name.endswith((".tar", ".tar.gz", ".tar.xz")):
         raise ValueError(f"Unexpected tarball filename: {tarball_file.name}")
     with tarfile.open(tarball_file) as tf:
         for name in tf.getnames():
